@@ -1,0 +1,156 @@
+@startuml Dating App Sequences
+
+skinparam responseMessageBelowArrow true
+skinparam maxMessageSize 100
+
+title Authentication Flow
+
+actor User
+participant "HTTP Handler" as Handler
+participant "Service Layer" as Service
+participant "Repository" as Repo
+database "Database" as DB
+
+group Sign Up
+    User -> Handler: POST /signup
+    activate Handler
+    Handler -> Service: SignUp(user, password)
+    activate Service
+    Service -> Service: Hash Password
+    Service -> Repo: CreateUser(user)
+    activate Repo
+    Repo -> DB: INSERT INTO users
+    DB --> Repo: user_id
+    Repo --> Service: user
+    deactivate Repo
+    Service --> Handler: user
+    deactivate Service
+    Handler --> User: 201 Created
+    deactivate Handler
+end
+
+group Login
+    User -> Handler: POST /login
+    activate Handler
+    Handler -> Service: Login(email, password)
+    activate Service
+    Service -> Repo: GetUserByEmail(email)
+    activate Repo
+    Repo -> DB: SELECT user
+    DB --> Repo: user
+    Repo --> Service: user
+    deactivate Repo
+    Service -> Service: Verify Password
+    Service -> Service: Generate JWT
+    Service --> Handler: token
+    deactivate Service
+    Handler --> User: 200 OK (JWT)
+    deactivate Handler
+end
+
+newpage Profile Interaction Flow
+
+title Profile Interaction Flow
+
+group Get Profile
+    User -> Handler: GET /profiles
+    activate Handler
+    Handler -> Service: GetProfiles(userID)
+    activate Service
+
+    Service -> Repo: GetUserFeatures(userID)
+    activate Repo
+    Repo -> DB: SELECT features
+    DB --> Repo: features
+    Repo --> Service: features
+    deactivate Repo
+
+    alt not premium
+        Service -> Repo: GetDailyInteractionCount(userID)
+        activate Repo
+        Repo -> DB: SELECT count
+        DB --> Repo: count
+        Repo --> Service: count
+        deactivate Repo
+    end
+
+    Service -> Repo: GetProfiles(userID)
+    activate Repo
+    Repo -> DB: SELECT profile
+    DB --> Repo: profile
+    Repo --> Service: profile
+    deactivate Repo
+
+    Service --> Handler: profile
+    deactivate Service
+    Handler --> User: 200 OK (profile)
+    deactivate Handler
+end
+
+group Create Profile Response
+    User -> Handler: POST /profiles/{id}/response
+    activate Handler
+    Handler -> Service: CreateProfileResponse(fromID, toID, type)
+    activate Service
+
+    Service -> Repo: GetUserFeatures(userID)
+    activate Repo
+    Repo -> DB: SELECT features
+    DB --> Repo: features
+    Repo --> Service: features
+    deactivate Repo
+
+    alt not premium
+        Service -> Repo: GetDailyInteractionCount(userID)
+        activate Repo
+        Repo -> DB: SELECT count
+        DB --> Repo: count
+        Repo --> Service: count
+        deactivate Repo
+    end
+
+    Service -> Repo: CreateProfileResponse(response)
+    activate Repo
+    Repo -> DB: INSERT response
+    DB --> Repo: response_id
+    Repo --> Service: response
+    deactivate Repo
+
+    Service --> Handler: success
+    deactivate Service
+    Handler --> User: 201 Created
+    deactivate Handler
+end
+
+newpage Premium Feature Flow
+
+title Premium Feature Flow
+
+group Subscribe to Feature
+    User -> Handler: POST /features/{id}/subscribe
+    activate Handler
+    Handler -> Service: SubscribeToFeature(userID, featureID, period)
+    activate Service
+
+    Service -> Repo: GetFeatureByID(featureID)
+    activate Repo
+    Repo -> DB: SELECT feature
+    DB --> Repo: feature
+    Repo --> Service: feature
+    deactivate Repo
+
+    Service -> Service: Calculate dates
+    Service -> Repo: CreateUserFeature(feature)
+    activate Repo
+    Repo -> DB: INSERT user_feature
+    DB --> Repo: feature_id
+    Repo --> Service: feature
+    deactivate Repo
+
+    Service --> Handler: feature
+    deactivate Service
+    Handler --> User: 201 Created
+    deactivate Handler
+end
+
+@enduml

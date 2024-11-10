@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  # app:
+  #   build: .
+  #   depends_on:
+  #     - postgres
+  #   environment:
+  #     - DB_URL=postgresql://dating_app:dating_app_password@postgres:5432/dating_app_db
+
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: dating_app
+      POSTGRES_PASSWORD: dating_app_password
+      POSTGRES_DB: dating_app_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
